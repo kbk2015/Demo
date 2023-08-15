@@ -1,0 +1,71 @@
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+
+import java.io.InputStream;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+public class JdbcInteractionTest {
+    private Connection connection;
+    private JdbcInteraction jdbcInteraction;
+
+    @BeforeEach
+    public void setUp() throws Exception {
+        connection = mock(Connection.class);
+        jdbcInteraction = new JdbcInteraction(connection);
+    }
+
+    @Test
+    public void testMockResultSetFromJson() throws Exception {
+        PreparedStatement preparedStatement = mock(PreparedStatement.class);
+        ResultSet resultSet = mock(ResultSet.class);
+
+        // Load JSON data for query1
+        InputStream query1Stream = getClass().getResourceAsStream("/query1Result.json");
+        JSONArray query1Array = new JSONArray(new String(query1Stream.readAllBytes()));
+
+        // Load JSON data for query2
+        InputStream query2Stream = getClass().getResourceAsStream("/query2Result.json");
+        JSONArray query2Array = new JSONArray(new String(query2Stream.readAllBytes()));
+
+        when(connection.prepareStatement(anyString())).thenReturn(preparedStatement);
+        when(preparedStatement.executeQuery()).thenReturn(resultSet);
+
+        // Simulate result set from JSON data for query1
+        simulateResultSetFromJson(resultSet, query1Array);
+
+        ResultSet actualResultSet1 = jdbcInteraction.executeQuery("SELECT * FROM table1");
+        // Assert or verify the results for query1
+
+        // Simulate result set from JSON data for query2
+        simulateResultSetFromJson(resultSet, query2Array);
+
+        ResultSet actualResultSet2 = jdbcInteraction.executeQuery("SELECT * FROM table2");
+        // Assert or verify the results for query2
+    }
+
+    private void simulateResultSetFromJson(ResultSet resultSet, JSONArray jsonArray) throws Exception {
+        Mockito.when(resultSet.next())
+                .thenReturn(true)
+                .thenReturn(true)
+                .thenReturn(true)
+                .thenReturn(false);
+
+        for (int i = 0; i < jsonArray.length(); i++) {
+            JSONObject jsonObject = jsonArray.getJSONObject(i);
+            int id = jsonObject.getInt("id");
+            String name = jsonObject.getString("name");
+
+            when(resultSet.getInt("id")).thenReturn(id);
+            when(resultSet.getString("name")).thenReturn(name);
+        }
+    }
+}
