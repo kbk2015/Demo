@@ -1,0 +1,43 @@
+import static org.mockito.Mockito.*;
+import org.junit.jupiter.api.Test;
+import org.springframework.jdbc.core.JdbcTemplate;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.Arrays;
+import java.util.List;
+
+public class MyServiceTest {
+
+    @Test
+    public void testGetUsernames() throws SQLException {
+        // Mocking the JdbcTemplate
+        JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
+        
+        // Create an instance of MyService with the mock JdbcTemplate
+        MyService myService = new MyService(jdbcTemplate);
+        
+        // Create a list of expected usernames
+        List<String> expectedUsernames = Arrays.asList("user1", "user2");
+        
+        // Mock the ResultSet and JdbcTemplate behavior
+        ResultSet resultSet = mock(ResultSet.class);
+        when(jdbcTemplate.query(anyString(), any(), any(RowMapper.class)))
+            .thenAnswer(invocation -> {
+                RowMapper<String> rowMapper = invocation.getArgument(2);
+                rowMapper.mapRow(resultSet, 0); // Simulate mapping rows
+                rowMapper.mapRow(resultSet, 1);
+                return expectedUsernames;
+            });
+
+        // Call the method to be tested
+        List<String> actualUsernames = myService.getUsernames();
+
+        // Assertions
+        assertEquals(expectedUsernames, actualUsernames);
+
+        // Verify interactions
+        verify(jdbcTemplate).query(anyString(), any(), any(RowMapper.class));
+        verify(resultSet, times(2)).next();
+        verify(resultSet, times(2)).getString("username");
+    }
+}
