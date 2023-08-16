@@ -1,0 +1,46 @@
+import static org.mockito.Mockito.*;
+import org.junit.jupiter.api.Test;
+import org.springframework.jdbc.core.JdbcTemplate;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+public class MyDaoTest {
+
+    @Test
+    public void testGetCountOfSomething() throws SQLException {
+        // Mocking the JdbcTemplate and its dependencies
+        JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
+        Connection connection = mock(Connection.class);
+        PreparedStatement preparedStatement = mock(PreparedStatement.class);
+        ResultSet resultSet = mock(ResultSet.class);
+
+        // Creating an instance of MyDao with the mock JdbcTemplate
+        MyDao myDao = new MyDao(jdbcTemplate);
+
+        // Mocking behavior for the JdbcTemplate and its ResultSet
+        when(jdbcTemplate.getDataSource()).thenReturn(dataSource);
+        when(dataSource.getConnection()).thenReturn(connection);
+        when(connection.prepareStatement(anyString())).thenReturn(preparedStatement);
+        when(preparedStatement.executeQuery()).thenReturn(resultSet);
+
+        // Mocking the ResultSet behavior
+        when(resultSet.next()).thenReturn(true, false); // Simulate two rows
+        when(resultSet.getInt(1)).thenReturn(42); // Simulate the count value
+
+        // Calling the method to be tested
+        int count = myDao.getCountOfSomething();
+
+        // Assertions
+        assertEquals(42, count);
+
+        // Verifying interactions
+        verify(jdbcTemplate).getDataSource();
+        verify(dataSource).getConnection();
+        verify(connection).prepareStatement(anyString());
+        verify(preparedStatement).executeQuery();
+        verify(resultSet, times(2)).next();
+        verify(resultSet).getInt(1);
+    }
+}
