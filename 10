@@ -1,0 +1,44 @@
+import org.w3c.dom.Attr;
+import org.w3c.dom.NamedNodeMap;
+import org.w3c.dom.Node;
+
+public class AttributeMapToString {
+    public static void main(String[] args) {
+        // Create a sample DOM element with attributes
+        org.w3c.dom.Element element = createSampleElement();
+
+        // Convert the attribute map of the element to a string
+        String attributeMapString = attributeMapToString(element.getAttributes());
+
+        // Print the string representation
+        System.out.println(attributeMapString);
+    }
+
+    public static org.w3c.dom.Element createSampleElement() {
+        // Create a sample DOM element with attributes
+        org.w3c.dom.Element element = document.createElement("sampleElement");
+        element.setAttribute("attribute1", "value1");
+        element.setAttribute("attribute2", "value2");
+        return element;
+    }
+
+    public static String attributeMapToString(NamedNodeMap attributes) {
+        StringBuilder sb = new StringBuilder();
+
+        for (int i = 0; i < attributes.getLength(); i++) {
+            Node node = attributes.item(i);
+
+            if (node instanceof Attr) {
+                Attr attribute = (Attr) node;
+                String attributeName = attribute.getName();
+                String attributeValue = attribute.getValue();
+
+                sb.append("Attribute Name: ").append(attributeName);
+                sb.append(", Value: ").append(attributeValue);
+                sb.append("\n");
+            }
+        }
+
+        return sb.toString();
+    }
+}
