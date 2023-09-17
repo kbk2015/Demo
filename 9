@@ -1,0 +1,48 @@
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import java.io.File;
+
+public class SpringIntegrationXMLTraversal {
+    public static void main(String[] args) {
+        try {
+            // Load your Spring Integration XML configuration file
+            File configFile = new File("spring-integration-config.xml");
+
+            // Create a DocumentBuilder
+            DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
+
+            // Parse the XML file
+            Document doc = dBuilder.parse(configFile);
+
+            // Normalize the document
+            doc.getDocumentElement().normalize();
+
+            // Start traversal from the root element
+            Element rootElement = doc.getDocumentElement();
+            traverseElement(rootElement, "");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void traverseElement(Element element, String indent) {
+        // Print the element's name and attributes
+        System.out.println(indent + "Element: " + element.getTagName());
+        
+        // Print any relevant attributes of the element
+        // e.g., if (element.hasAttribute("id")) System.out.println("id: " + element.getAttribute("id"));
+
+        // Traverse child elements recursively
+        NodeList childNodes = element.getChildNodes();
+        for (int i = 0; i < childNodes.getLength(); i++) {
+            if (childNodes.item(i) instanceof Element) {
+                traverseElement((Element) childNodes.item(i), indent + "  "); // Increase the indentation
+            }
+        }
+    }
+}
