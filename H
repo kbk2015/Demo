@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculate Above Average</title>
+</head>
+<body>
+    <h1>Calculate Numbers Above Average</h1>
+    <form>
+        <label for="num1">Enter Number 1:</label>
+        <input type="text" id="num1" name="num1" required><br><br>
+
+        <label for="num2">Enter Number 2:</label>
+        <input type="text" id="num2" name="num2" required><br><br>
+
+        <input type="button" value="Calculate" onclick="calculateAboveAverage()">
+    </form>
+
+    <div id="result">
+        <!-- Result will be displayed here -->
+    </div>
+
+    <script>
+        function calculateAboveAverage() {
+            // Get the input values
+            const num1 = parseFloat(document.getElementById("num1").value);
+            const num2 = parseFloat(document.getElementById("num2").value);
+
+            if (!isNaN(num1) && !isNaN(num2)) {
+                // Calculate the average
+                const average = (num1 + num2) / 2;
+
+                // Determine which numbers are above average
+                const aboveAverage = [];
+
+                if (num1 > average) {
+                    aboveAverage.push(num1);
+                }
+                if (num2 > average) {
+                    aboveAverage.push(num2);
+                }
+
+                // Display the result
+                const resultDiv = document.getElementById("result");
+                if (aboveAverage.length === 0) {
+                    resultDiv.textContent = "Both numbers are equal to or below the average.";
+                } else {
+                    resultDiv.textContent = "Numbers above average: " + aboveAverage.join(", ");
+                }
+            } else {
+                alert("Please enter valid numbers.");
+            }
+        }
+    </script>
+</body>
+</html>
