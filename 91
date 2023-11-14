@@ -1,0 +1,69 @@
+import org.springframework.boot.actuate.health.Health;
+import org.springframework.boot.actuate.health.HealthIndicator;
+import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.core.MongoTemplate;
+
+@Component
+public class MongoHealthIndicator implements HealthIndicator {
+
+    private final MongoTemplate mongoTemplate;
+
+    @Autowired
+    public MongoHealthIndicator(MongoTemplate mongoTemplate) {
+        this.mongoTemplate = mongoTemplate;
+    }
+
+    @Override
+    public Health health() {
+        try {
+            // Use a simple MongoDB command to check if the database is up
+            mongoTemplate.getDb().getStats();
+            return Health.up().build();
+        } catch (Exception ex) {
+            return Health.down().withException(ex).build();
+        }
+    }
+}
+
+
+
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.stereotype.Component;
+
+@Component
+public class YourService {
+
+    private final MongoTemplate mongoTemplate;
+
+    @Autowired
+    public YourService(MongoTemplate mongoTemplate) {
+        this.mongoTemplate = mongoTemplate;
+    }
+
+    // ... rest of your service code using mongoTemplate
+}
+
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.mongodb.core.MongoTemplate;
+
+@Configuration
+public class MongoConfig {
+
+    @Bean
+    public MongoClient mongoClient() {
+        // Set up your MongoDB connection details
+        return MongoClients.create("mongodb://localhost:27017");
+    }
+
+    @Bean
+    public MongoTemplate mongoTemplate() {
+        return new MongoTemplate(mongoClient(), "yourDatabaseName");
+    }
+}
+
