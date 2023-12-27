@@ -1,0 +1,96 @@
+def calculate_vwap(data):
+    data['Date'] = pd.to_datetime(data.index).date
+    data['price'] = (data['High'] + data['Low'] + data['Close']) / 3
+    data['price_volume'] = data['price'] * data['Volume']
+    data['v_cumsum_by_date'] = data.groupby(['Date'])['Volume'].cumsum()
+    data['price_volume_cumsum'] = data.groupby(['Date'])['price_volume'].cumsum()
+    data['vwap'] =   data['price_volume_cumsum']/ data['v_cumsum_by_date']
+    return data['vwap']
+
+#Calculate VWAP
+data['vwap']= calculate_vwap(data)
+#Data wth limited columns
+data_cleaned = data[['Open','High','Low','Close','Volume','vwap','Date']]
+
+
+import numpy as np
+y['vwap_diff'] = round(y['vwap'] - y['vwap'].shift(1),0)
+y['trend'] = np.where(y['vwap_diff'] <= -1 , 'D', np.where(y['vwap_diff'] >= 1, 'U',''))
+y['buy_price'] = np.where(y['trend'] == 'D' , round((y['vwap']-1)*2,0)/2, np.where(y['trend'] == 'U', round((y['vwap']+1)*2,0)/2,''))
+y['sell_out'] = np.where(y['trend'] == 'D' , round((y['vwap']+1)*2,0)/2, np.where(y['trend'] == 'U', round((y['vwap']-1)*2,0)/2,''))
+
+
+data_cleaned_joined = pd.merge(data_cleaned, y_strip,left_on = 'Date', right_on = 'date_next_day',how="left").set_axis(data_cleaned.index)
+
+
+
+
+
+from backtesting import Strategy
+from backtesting.lib import crossover
+import numpy as np
+from Singleton import Singleton
+
+#global transactions
+transactions = pd.DataFrame(columns = ['buy_datetime','buy_qty','buy_price','sell_datetime','sell_qty','sell_price','net','duration'])
+s = Singleton("df")
+
+class VWAP(Strategy):
+    
+    # Define the two MA lags as *class variables*
+    # for later optimization
+   
+    
+   
+    def init(self):
+        #self.calculate_y()
+        print("Inside init")
+           
+    
+    def next(self):
+        global transactions 
+        #Buy when not in position
+        if(self.position.size != 0):
+            if self.position.size < 0:
+                if self.data.Close[-1] < self.take_profit:
+                    transaction= {'sell_datetime': self.data.index[-1],'sell_qty' : self.position.size ,'sell_price' : self.data.Close[-1]}
+                    transactions = transactions.append(transaction, ignore_index=True)
+                    self.position.close()
+                    #print("Sell Short At: " ,self.data.Close[-1], ' AT:', self.data.index[-1])
+            else:
+                if self.data.Close[-1] > self.take_profit:
+                    transaction= {'sell_datetime': self.data.index[-1],'sell_qty' : self.position.size ,'sell_price' : self.data.Close[-1]}
+                    transactions = transactions.append(transaction, ignore_index=True)
+                    self.position.close()
+                    #print("Sell Long At: " ,self.data.Close[-1], ' AT:', self.data.index[-1])
+            
+        else:
+            #Downtrend
+            if(self.data.trend[-1] == 'D'):
+                if(float(self.data.Close[-1]) < float(self.data.buy_price[-1])):
+                    transaction= {'buy_datetime': self.data.index[-1],'buy_qty' : self.position.size ,'buy_price' : self.data.Close[-1], 'trend' : 'D'}
+                    transactions = transactions.append(transaction, ignore_index=True)
+                    self.buy(size=-1)
+                    self.stop_loss = self.data.sell_out[-1]
+                    self.take_profit = self.data.Low[0] - 2
+                    #print("Buy Short At: " ,self.data.Close[-1], ' AT:', self.data.index[-1])
+                    
+                    
+            #Uptrend
+            if(self.data.trend[-1] == 'U'):
+                if(float(self.data.Close[-1]) > float(self.data.buy_price[-1])):
+                    transaction= {'buy_datetime': self.data.index[-1],'buy_qty' : self.position.size ,'buy_price' : self.data.Close[-1], 'trend' : 'U'}
+                    transactions = transactions.append(transaction, ignore_index=True)
+                    self.buy(size=1)
+                    self.stop_loss = self.data.sell_out[-1]
+                    self.take_profit = self.data.Low[0] + 2
+                    #print("Buy Long At: " ,self.data.Close[-1], ' AT:', self.data.index[-1])
+                    
+
+        #elif(self.data.trend == 'U'): 
+            #print('U')    
+from backtesting import Backtest
+
+bt = Backtest(data_cleaned_joined, VWAP, cash=10000, commission=.002)
+print(transactions.size)
+bt.run()
