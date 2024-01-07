@@ -1,0 +1,114 @@
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
+import org.springframework.amqp.rabbit.core.RabbitAdmin;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.rabbit.junit.RabbitListenerTest;
+import org.springframework.amqp.rabbit.listener.RabbitListenerEndpoint;
+import org.springframework.amqp.rabbit.listener.RabbitListenerEndpointContainer;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+@ExtendWith(SpringExtension.class)
+@ContextConfiguration(classes = RabbitMQTest.Config.class)
+@RabbitListenerTest
+public class RabbitMQTest {
+
+    @Configuration
+    static class Config {
+
+        @Bean
+        public RabbitTemplate rabbitTemplate() {
+            return new RabbitTemplate();
+        }
+
+        @Bean
+        public RabbitAdmin rabbitAdmin() {
+            return new RabbitAdmin(rabbitTemplate());
+        }
+
+        @Bean
+        public Queue testQueue() {
+            return new Queue("testQueue");
+        }
+
+        @Bean
+        public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory() {
+            SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
+            factory.setConnectionFactory(rabbitAdmin().getConnectionFactory());
+            return factory;
+        }
+
+        @Bean
+        public RabbitListenerEndpointContainer rabbitListenerEndpointContainer() {
+            return rabbitListenerContainerFactory().createListenerContainer();
+        }
+
+        @Bean
+        public RabbitListenerEndpoint endpoint() {
+            RabbitListenerEndpoint endpoint = new RabbitListenerEndpoint() {
+                @Override
+                public void setupListener(RabbitListenerEndpointContainer rabbitListenerEndpointContainer) {
+                    rabbitListenerEndpointContainer.setQueueNames("testQueue");
+                    rabbitListenerEndpointContainer.setMessageListener(message -> {
+                        // Process the received message
+                        System.out.println("Received message: " + new String(message.getBody()));
+                    });
+                }
+
+                @Override
+                public void start() {
+                    // Start the listener
+                }
+
+                @Override
+                public void stop() {
+                    // Stop the listener
+                }
+            };
+            return endpoint;
+        }
+    }
+
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
+
+    @Autowired
+    private RabbitListenerEndpointContainer rabbitListenerEndpointContainer;
+
+    @Autowired
+    private Queue testQueue;
+
+    @Test
+    public void testPostMessageToListenerAndVerifyMessageCount() throws InterruptedException {
+        String messageBody = "Test message";
+
+        // Use a latch to synchronize test execution
+        CountDownLatch latch = new CountDownLatch(1);
+        rabbitListenerEndpointContainer.getListenerContainers().forEach(listener -> listener.setupMessageListener((message, channel) -> {
+            // Process the received message
+            System.out.println("Received message: " + new String(message.getBody()));
+            latch.countDown(); // Release the latch
+        }));
+
+        // Post a message to the listener
+        rabbitTemplate.convertAndSend(testQueue.getName(), messageBody);
+
+        // Wait for the listener to receive the message
+        assertTrue(latch.await(5, TimeUnit.SECONDS), "Listener did not receive the message within the timeout");
+
+        // Check the queue count
+        int messageCount = rabbitAdmin().getQueueInfo(testQueue.getName()).getMessageCount();
+        assertEquals(0, messageCount, "Queue count should be 0 after processing the message");
+    }
+}
