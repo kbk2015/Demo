@@ -1,35 +1,20 @@
-import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
-import org.springframework.amqp.rabbit.listener.ConditionalRejectingErrorHandler;
-import org.springframework.amqp.rabbit.listener.exception.ListenerExecutionFailedException;
+import com.github.tomakehurst.wiremock.extension.Parameters;
+import com.github.tomakehurst.wiremock.extension.requestfilter.RequestFilterAction;
+import com.github.tomakehurst.wiremock.extension.requestfilter.RequestWrapper;
+import com.github.tomakehurst.wiremock.extension.requestfilter.StubRequestFilter;
 
-import java.util.concurrent.TimeUnit;
-
-public class CustomErrorHandler extends ConditionalRejectingErrorHandler {
-
-    private final int maxFailureRate; // Define your maximum failure rate here
-
-    public CustomErrorHandler(int maxFailureRate) {
-        this.maxFailureRate = maxFailureRate;
-    }
+public class RequestLoggingExtension extends StubRequestFilter {
 
     @Override
-    public void handleError(ListenerExecutionFailedException exception) {
-        super.handleError(exception);
-        // Check failure rate and sleep if the threshold is exceeded
-        if (failureRateExceeded()) {
-            try {
-                // Sleep for a specific duration (e.g., 30 seconds)
-                TimeUnit.SECONDS.sleep(30);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        }
-    }
+    public RequestFilterAction filter(RequestWrapper request, Parameters parameters) {
+        // Log the incoming request details
+        System.out.println("Received request: " + request.getUrl());
+        System.out.println("Headers: " + request.getAllHeaderKeys());
+        System.out.println("Body: " + request.getBodyAsString());
 
-    private boolean failureRateExceeded() {
-        // Implement logic to check failure rate (e.g., count consecutive failures)
-        // Return true if failure rate exceeds the threshold (maxFailureRate)
-        // Return false otherwise
-        return /* Your logic to check failure rate */;
+        // You can perform additional actions with the request here if needed
+
+        // Return RequestFilterAction.continueWith(request) to continue processing the request
+        return RequestFilterAction.continueWith(request);
     }
 }
