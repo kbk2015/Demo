@@ -1,0 +1,42 @@
+import numpy as np
+from scipy.optimize import minimize
+
+# Mock stock price data (replace with your actual data)
+stock_prices = np.random.rand(100) * 10  # 100 days of stock prices
+
+def objective_function(actions, prices):
+    """
+    Objective function to maximize total return based on buy/sell decisions.
+
+    Parameters:
+    - actions: Buy (1), Sell (-1), or Hold (0) decisions for each day.
+    - prices: Daily stock prices.
+
+    Returns:
+    - Total return (negative, as we're maximizing).
+    """
+    position = 0
+    cash = 10000  # Initial cash
+    for i in range(len(actions)):
+        if actions[i] == 1:  # Buy
+            position += cash / prices[i]
+            cash = 0
+        elif actions[i] == -1:  # Sell
+            cash += position * prices[i]
+            position = 0
+    final_portfolio_value = cash + position * prices[-1]
+    return -final_portfolio_value  # Minimize negative return (maximize total return)
+
+# Constraints (optional): Limit the number of buy/sell actions
+constraints = ({'type': 'eq', 'fun': lambda actions: np.sum(np.abs(actions) - 1)})  
+
+# Initial buy/sell decisions (0: Hold, 1: Buy, -1: Sell)
+initial_actions = np.zeros_like(stock_prices)
+
+# Optimize for maximum total return
+result = minimize(objective_function, initial_actions, args=(stock_prices,), method='SLSQP', constraints=constraints)
+
+# Optimal buy/sell decisions
+optimal_actions = result.x
+
+print("Optimal Buy/Sell Decisions:", optimal_actions)
