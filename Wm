@@ -1,0 +1,84 @@
+@Configuration
+public class WireMockConfig {
+
+    private static final String[] predefinedResponses = {
+            "{\"message\": \"Response 1\"}",
+            "{\"message\": \"Response 2\"}",
+            "{\"message\": \"Response 3\"}"
+            // Add more responses as needed
+    };
+
+    @Bean(initMethod = "start", destroyMethod = "stop")
+    public WireMockServer wireMockServer(CallbackService callbackService) {
+        WireMockServer wireMockServer = new WireMockServer(WireMockConfiguration.options().port(8080));
+
+        // Capture request and respond with predefined responses
+        wireMockServer.stubFor(WireMock.any(WireMock.urlPathMatching(".*"))
+                .willReturn(WireMock.aResponse()
+                        .withTransformers(new CaptureAndRespondTransformer(callbackService))));
+
+        return wireMockServer;
+    }
+}
+import org.springframework.stereotype.Service;
+
+@Service
+public class CallbackService {
+
+    // Method to be called when both request and response are complete
+    public void onRequestAndResponseComplete(String requestBody, String responseBody) {
+        // Your logic to call another service using the captured request and response details
+        System.out.println("Calling another service with Request Body: " + requestBody +
+                            " and Response Body: " + responseBody);
+    }
+}
+
+
+public static class CaptureAndRespondTransformer extends com.github.tomakehurst.wiremock.extension.ResponseTransformer {
+
+    private CallbackService callbackService;
+
+    public CaptureAndRespondTransformer(CallbackService callbackService) {
+        this.callbackService = callbackService;
+    }
+
+    @Override
+    public com.github.tomakehurst.wiremock.http.Response transform(com.github.tomakehurst.wiremock.http.Request request,
+                                                                   com.github.tomakehurst.wiremock.http.Response response,
+                                                                   com.github.tomakehurst.wiremock.stubbing.Scenario scenario,
+                                                                   Parameters parameters) {
+        // Capture request details
+        String requestBody = request.getBodyAsString();
+        System.out.println("Captured Request Body: " + requestBody);
+
+        // Get the index from the request URL (for example, /response/1)
+        String[] pathSegments = request.getUrl().split("/");
+        int index = Integer.parseInt(pathSegments[pathSegments.length - 1]);
+
+        // Respond with a predefined response from the array
+        String predefinedResponse = predefinedResponses[index];
+
+        // Call the callback service with request and response details
+        callbackService.onRequestAndResponseComplete(requestBody, predefinedResponse);
+
+        return com.github.tomakehurst.wiremock.http.Response.Builder.like(response)
+                .but()
+                .body(predefinedResponse)
+                .build();
+    }
+
+    @Override
+    public String getName() {
+        return "capture-and-respond";
+    }
+}
+
+
+
+
+
+
+
+
+
+
