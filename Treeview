@@ -1,0 +1,168 @@
+app.module.ts
+
+import { NgModule } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { MatTreeModule } from '@angular/material/tree';
+import { MatIconModule } from '@angular/material/icon';
+import { MatListModule } from '@angular/material/list';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatButtonModule } from '@angular/material/button';
+
+import { AppComponent } from './app.component';
+import { LeftPanelComponent } from './left-panel/left-panel.component';
+import { RightPanelComponent } from './right-panel/right-panel.component';
+
+@NgModule({
+  declarations: [AppComponent, LeftPanelComponent, RightPanelComponent],
+  imports: [
+    BrowserModule,
+    BrowserAnimationsModule,
+    MatTreeModule,
+    MatIconModule,
+    MatListModule,
+    MatDividerModule,
+    MatButtonModule,
+  ],
+  providers: [],
+  bootstrap: [AppComponent],
+})
+export class AppModule {}
+
+app.component.html
+
+<div style="display: flex; height: 100vh; border: 1px solid #ccc;">
+  <!-- Left Panel -->
+  <div style="width: 30%; border-right: 1px solid #ccc; padding: 1rem;">
+    <app-left-panel (selectItem)="onSelectItem($event)"></app-left-panel>
+  </div>
+
+  <!-- Right Panel -->
+  <div style="width: 70%; padding: 1rem;">
+    <app-right-panel [jsonData]="selectedData"></app-right-panel>
+  </div>
+</div>
+
+left panel component ts
+
+import { Component } from '@angular/core';
+
+@Component({
+  selector: 'app-root',
+  templateUrl: './app.component.html',
+})
+export class AppComponent {
+  selectedData: any;
+
+  // Method to update the right panel based on left panel selection
+  onSelectItem(data: any) {
+    this.selectedData = data;
+  }
+}
+
+
+right-panel.component.ts
+
+import { Component, EventEmitter, Output } from '@angular/core';
+
+@Component({
+  selector: 'app-left-panel',
+  template: `
+    <mat-list>
+      <mat-list-item *ngFor="let item of items" (click)="selectItem(item)">
+        {{ item.name }} ({{ item.count }})
+      </mat-list-item>
+    </mat-list>
+  `,
+})
+export class LeftPanelComponent {
+  @Output() selectItem = new EventEmitter<any>();
+
+  items = [
+    { name: 'Category A', count: 10, data: { key: 'valueA', children: [] } },
+    { name: 'Category B', count: 5, data: { key: 'valueB', children: [{ subKey: 'subValueB' }] } },
+    { name: 'Category C', count: 8, data: { key: 'valueC', children: [{ subKey: 'subValueC' }] } },
+  ];
+
+  selectItem(item: any) {
+    this.selectItem.emit(item.data);
+  }
+}
+
+import { Component, Input } from '@angular/core';
+
+@Component({
+  selector: 'app-right-panel',
+  template: `
+    <mat-tree [dataSource]="dataSource" [treeControl]="treeControl">
+      <mat-tree-node *matTreeNodeDef="let node" matTreeNodePadding>
+        <button mat-icon-button disabled></button>
+        {{ node.key }}: {{ node.value }}
+      </mat-tree-node>
+
+      <mat-tree-node
+        *matTreeNodeDef="let node; when: hasChild"
+        matTreeNodePadding
+      >
+        <button
+          mat-icon-button
+          matTreeNodeToggle
+          [attr.aria-label]="'toggle ' + node.key"
+        >
+          <mat-icon>
+            {{
+              treeControl.isExpanded(node) ? 'expand_more' : 'chevron_right'
+            }}
+          </mat-icon>
+        </button>
+        {{ node.key }}
+      </mat-tree-node>
+    </mat-tree>
+  `,
+})
+export class RightPanelComponent {
+  @Input() set jsonData(data: any) {
+    if (data) {
+      this.dataSource.data = this.buildTree(data, 0);
+    }
+  }
+
+  treeControl = new FlatTreeControl<TreeNode>(
+    (node) => node.level,
+    (node) => node.expandable
+  );
+  dataSource = new MatTreeFlatDataSource(this.treeControl, this.treeFlattener);
+
+  private treeFlattener = new MatTreeFlattener(
+    (node: TreeNode, level: number) => ({
+      ...node,
+      level,
+      expandable: !!node.children && node.children.length > 0,
+    }),
+    (node) => node.level,
+    (node) => node.expandable,
+    (node) => node.children
+  );
+
+  buildTree(obj: any, level: number): TreeNode[] {
+    return Object.keys(obj).map((key) => {
+      const value = obj[key];
+      const node: TreeNode = { key, value, level, expandable: false };
+
+      if (value && typeof value === 'object') {
+        node.children = this.buildTree(value, level + 1);
+        node.expandable = true;
+      }
+
+      return node;
+    });
+  }
+}
+
+interface TreeNode {
+  key: string;
+  value: any;
+  children?: TreeNode[];
+  level: number;
+  expandable: boolean;
+}
