@@ -1,0 +1,120 @@
+import { NgModule } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+
+import { MatTreeModule } from '@angular/material/tree';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
+
+import { AppComponent } from './app.component';
+
+@NgModule({
+  declarations: [AppComponent],
+  imports: [
+    BrowserModule,
+    BrowserAnimationsModule,
+    MatTreeModule,
+    MatIconModule,
+    MatButtonModule,
+  ],
+  providers: [],
+  bootstrap: [AppComponent],
+})
+export class AppModule {}
+
+
+
+import { Component } from '@angular/core';
+import {
+  FlatTreeControl,
+  NestedTreeControl,
+} from '@angular/cdk/tree';
+import { MatTreeNestedDataSource } from '@angular/material/tree';
+
+@Component({
+  selector: 'app-root',
+  templateUrl: './app.component.html',
+  styleUrls: ['./app.component.css'],
+})
+export class AppComponent {
+  title = 'Angular 18 Tree View';
+
+  // Sample JSON Data
+  treeData = [
+    {
+      name: 'Parent 1',
+      children: [
+        {
+          name: 'Child 1.1',
+          children: [
+            { name: 'Grandchild 1.1.1' },
+            { name: 'Grandchild 1.1.2' },
+          ],
+        },
+        { name: 'Child 1.2' },
+      ],
+    },
+    {
+      name: 'Parent 2',
+      children: [{ name: 'Child 2.1' }, { name: 'Child 2.2' }],
+    },
+    { name: 'Parent 3' },
+  ];
+
+  // Tree Control and Data Source
+  treeControl = new NestedTreeControl<any>((node) => node.children);
+  dataSource = new MatTreeNestedDataSource<any>();
+
+  constructor() {
+    this.dataSource.data = this.treeData;
+  }
+
+  hasChild = (_: number, node: any) =>
+    !!node.children && node.children.length > 0;
+}
+
+
+
+
+<mat-tree [dataSource]="dataSource" [treeControl]="treeControl">
+  <!-- Nodes with children -->
+  <mat-tree-node
+    *matTreeNodeDef="let node; when: hasChild"
+    matTreeNodePadding
+  >
+    <button
+      mat-icon-button
+      matTreeNodeToggle
+      [attr.aria-label]="'toggle ' + node.name"
+    >
+      <mat-icon>
+        {{ treeControl.isExpanded(node) ? 'expand_more' : 'chevron_right' }}
+      </mat-icon>
+    </button>
+    {{ node.name }}
+  </mat-tree-node>
+
+  <!-- Leaf Nodes -->
+  <mat-tree-node *matTreeNodeDef="let node" matTreeNodePadding>
+    <button mat-icon-button disabled></button>
+    {{ node.name }}
+  </mat-tree-node>
+</mat-tree>
+
+
+mat-tree {
+  max-width: 600px;
+  margin: 0 auto;
+  font-family: Arial, sans-serif;
+}
+
+mat-tree-node {
+  padding: 4px;
+}
+
+button {
+  margin-right: 8px;
+}
+
+
+
